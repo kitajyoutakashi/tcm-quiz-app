@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>日中鍼認定Basic therapist練習ページ</title>
+    <style>
+        :root { --main-color: #2c3e50; --accent-color: #27ae60; --error-color: #e74c3c; }
+        body { font-family: 'Helvetica Neue', Arial, sans-serif; background-color: #f4f7f6; color: var(--main-color); margin: 0; padding: 20px; display: flex; justify-content: center; }
+        .container { background: white; max-width: 600px; width: 100%; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); text-align: center; }
+        .hidden { display: none; }
+        h1 { font-size: 1.5rem; margin-bottom: 20px; border-bottom: 2px solid var(--accent-color); padding-bottom: 10px; }
+        input[type="password"], select { width: 80%; padding: 12px; margin: 10px 0; border: 1px solid #ccc; border-radius: 6px; }
+        button { background-color: var(--accent-color); color: white; border: none; padding: 12px 24px; border-radius: 6px; cursor: pointer; font-size: 1rem; margin: 10px 5px; transition: 0.3s; }
+        button:hover { opacity: 0.8; }
+        .ox-container { display: flex; justify-content: center; gap: 20px; margin-top: 20px; }
+        .btn-o { background-color: #3498db; font-size: 2rem; width: 80px; height: 80px; border-radius: 50%; }
+        .btn-x { background-color: #e67e22; font-size: 2rem; width: 80px; height: 80px; border-radius: 50%; }
+        #feedback { font-weight: bold; font-size: 1.2rem; margin: 15px 0; min-height: 1.5em; }
+        #explanation-box { background: #e8f6ef; padding: 15px; border-radius: 8px; margin-top: 15px; text-align: left; border-left: 5px solid var(--accent-color); }
+        .range-label { display: block; margin-top: 20px; font-weight: bold; }
+        #range-value { color: var(--accent-color); font-size: 1.2rem; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div id="view-login">
+        <h1>認定Basic Therapist ログイン</h1>
+        <p>パスワードを入力してください</p>
+        <input type="password" id="password-input" placeholder="Password">
+        <br>
+        <button onclick="checkPassword()">ログイン</button>
+    </div>
+
+    <div id="view-setup" class="hidden">
+        <h1>学習設定</h1>
+        <p>分野を選択してください</p>
+        <select id="category-select">
+            <option value="すべて">すべて</option>
+            </select>
+        
+        <label class="range-label">出題問題数: <span id="range-value">10</span>問</label>
+        <input type="range" id="question-range" min="1" max="50" value="10" oninput="updateRangeText(this.value)" style="width:80%">
+        
+        <br>
+        <button onclick="startQuiz()">クイズ開始</button>
+    </div>
+
+    <div id="view-quiz" class="hidden">
+        <div id="quiz-header" style="font-size: 0.9rem; color: #666;"></div>
+        <h2 id="category-display" style="color: var(--accent-color);"></h2>
+        <div id="question-text" style="font-size: 1.2rem; margin: 20px 0; min-height: 80px;"></div>
+        
+        <div class="ox-container">
+            <button class="btn-o" onclick="judge('〇')">〇</button>
+            <button class="btn-x" onclick="judge('×')">×</button>
+        </div>
+        
+        <div id="feedback"></div>
+        
+        <button id="btn-explanation" class="hidden" onclick="showExplanation()">解説を見る</button>
+        <div id="explanation-box" class="hidden"></div>
+        <br>
+        <button id="btn-next" class="hidden" onclick="nextQuestion()">次の問題へ</button>
+    </div>
+
+    <div id="view-result" class="hidden">
+        <h1>結果発表</h1>
+        <div id="score-display" style="font-size: 2rem; margin: 20px 0;"></div>
+        <button onclick="location.reload()">トップに戻る</button>
+    </div>
+</div>
+
+<script>
+    let allQuestions = [];
+    let targetQuestions = [];
+    let currentIndex = 0;
+    let score = 0;
+    const PASS = "nicchushin2026"; // パスワード設定
+
+    // JSONデータの読み込み
+    fetch('questions.json')
+        .then(response => response.json())
+        .then(data => {
+            allQuestions = data;
+            const categories = [...new Set(data.map(q => q.category))];
+            const select = document.getElementById('category-select');
+            categories.forEach(cat => {
+                const opt = document.createElement('option');
+                opt.value = cat;
+                opt.textContent = cat;
+                select.appendChild(opt);
+            });
+        });
+
+    function checkPassword() {
+        const input = document.getElementById('password-input').value;
+        if(input === PASS) {
+            showView('view-setup');
+        } else {
+            alert("パスワードが違います");
+        }
+    }
+
+    function updateRangeText(val) {
+        document.getElementById('range-value').textContent = val;
+    }
+
+    function showView(id) {
+        document.querySelectorAll('.container > div').forEach(div => div.classList.add('hidden'));
+        document.getElementById(id).classList.remove('hidden');
+    }
+
+    function startQuiz() {
+        const cat = document.getElementById('category-select').value;
+        const num = parseInt(document.getElementById('question-range').value);
+        
+        targetQuestions = allQuestions.filter(q => cat === "すべて" || q.category === cat);
+        targetQuestions = targetQuestions.sort(() => Math.random() - 0.5).slice(0, num);
+        
+        currentIndex = 0;
+        score = 0;
+        showView('view-quiz');
+        showQuestion();
+    }
+
+    function showQuestion() {
+        const q = targetQuestions[currentIndex];
+        document.getElementById('quiz-header').textContent = `第 ${currentIndex + 1} 問 / 全 ${targetQuestions.length} 問中`;
+        document.getElementById('category-display').textContent = `【${q.category}】`;
+        document.getElementById('question-text').textContent = q.question;
+        document.getElementById('feedback').textContent = "";
+        document.getElementById('explanation-box').classList.add('hidden');
+        document.getElementById('btn-explanation').classList.add('hidden');
+        document.getElementById('btn-next').classList.add('hidden');
+        document.querySelectorAll('.ox-container button').forEach(b => b.disabled = false);
+    }
+
+    function judge(choice) {
+        const q = targetQuestions[currentIndex];
+        const feedback = document.getElementById('feedback');
+        document.querySelectorAll('.ox-container button').forEach(b => b.disabled = true);
+        
+        if(choice === q.answer) {
+            feedback.textContent = "正解！";
+            feedback.style.color = "var(--accent-color)";
+            score++;
+        } else {
+            feedback.textContent = "不正解...";
+            feedback.style.color = "var(--error-color)";
+        }
+        document.getElementById('btn-explanation').classList.remove('hidden');
+        document.getElementById('btn-next').classList.remove('hidden');
+    }
+
+    function showExplanation() {
+        const box = document.getElementById('explanation-box');
+        box.textContent = targetQuestions[currentIndex].explanation;
+        box.classList.remove('hidden');
+    }
+
+    function nextQuestion() {
+        currentIndex++;
+        if(currentIndex < targetQuestions.length) {
+            showQuestion();
+        } else {
+            showResult();
+        }
+    }
+
+    function showResult() {
+        showView('view-result');
+        const percent = Math.round((score / targetQuestions.length) * 100);
+        document.getElementById('score-display').innerHTML = `正答率: ${percent}%<br>(${score} / ${targetQuestions.length})`;
+    }
+</script>
+
+</body>
+</html>
