@@ -40,7 +40,7 @@
     <div id="view-setup" class="hidden">
         <h1>学習設定</h1>
         <p>学習したい分野を選択してください</p>
-        <select id="category-select">
+        <select id="category-select" onchange="adjustRangeMax()">
             <option value="すべて">すべての分野</option>
         </select>
         
@@ -80,9 +80,10 @@
 <script>
     let allQuestions = [];
     let targetQuestions = [];
+    let categoryCounts = {}; 
     let currentIndex = 0;
     let score = 0;
-    const PASS = "nicchushin2026"; // パスワード
+    const PASS = "nicchushin2026"; // パスワードを固定値に戻した
 
     // JSONデータの読み込み
     fetch('questions.json')
@@ -92,16 +93,29 @@
         })
         .then(data => {
             allQuestions = data;
-            const categories = [...new Set(data.map(q => q.category))];
-            const select = document.getElementById('category-select');
-            categories.forEach(cat => {
-                if(cat) {
-                    const opt = document.createElement('option');
-                    opt.value = cat;
-                    opt.textContent = cat;
-                    select.appendChild(opt);
-                }
+            
+            // 分野ごとの問題数をカウント
+            categoryCounts = {};
+            data.forEach(q => {
+                const cat = q.category || "未分類";
+                categoryCounts[cat] = (categoryCounts[cat] || 0) + 1;
             });
+
+            const select = document.getElementById('category-select');
+            
+            // 「すべての分野」の表示を更新
+            const allOpt = select.querySelector('option[value="すべて"]');
+            allOpt.textContent = `すべての分野 (${data.length}問)`;
+
+            // 各分野の選択肢を追加
+            Object.keys(categoryCounts).sort().forEach(cat => {
+                const opt = document.createElement('option');
+                opt.value = cat;
+                opt.textContent = `${cat} (${categoryCounts[cat]}問)`;
+                select.appendChild(opt);
+            });
+
+            adjustRangeMax(); 
         })
         .catch(error => {
             console.error('Error loading JSON:', error);
@@ -114,6 +128,20 @@
             showView('view-setup');
         } else {
             alert("パスワードが正しくありません");
+        }
+    }
+
+    // 分野選択に合わせてスライダーの最大値を調整する機能
+    function adjustRangeMax() {
+        const cat = document.getElementById('category-select').value;
+        const rangeInput = document.getElementById('question-range');
+        const maxVal = (cat === "すべて") ? allQuestions.length : categoryCounts[cat];
+        
+        rangeInput.max = maxVal;
+        // 現在の値が分野の最大数を超えていたら数値を修正する
+        if (parseInt(rangeInput.value) > maxVal) {
+            rangeInput.value = maxVal;
+            updateRangeText(maxVal);
         }
     }
 
@@ -131,7 +159,6 @@
         const num = parseInt(document.getElementById('question-range').value);
         
         targetQuestions = allQuestions.filter(q => cat === "すべて" || q.category === cat);
-        // ランダムシャッフル
         targetQuestions = targetQuestions.sort(() => Math.random() - 0.5).slice(0, num);
         
         if (targetQuestions.length === 0) {
@@ -162,7 +189,7 @@
         const feedback = document.getElementById('feedback');
         document.querySelectorAll('.ox-container button').forEach(b => b.disabled = true);
         
-        // 判定ロジックの強化: 空白除去と記号のゆらぎ吸収
+        // 空白除去と全角・半角の揺らぎを吸収して判定する
         const cleanAnswer = q.answer.trim().replace(/[◯○]/g, '〇'); 
         const cleanChoice = choice.trim().replace(/[◯○]/g, '〇');
 
