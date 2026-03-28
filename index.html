@@ -15,7 +15,6 @@
         button:hover { opacity: 0.8; }
         button:disabled { background-color: #ccc; cursor: not-allowed; }
         
-        /* 〇×ボタンのサイズ調整（少し小さく） */
         .ox-container { display: flex; justify-content: center; gap: 30px; margin: 25px 0; }
         .btn-o { background-color: #3498db; font-size: 1.8rem; width: 70px; height: 70px; border-radius: 50%; display: flex; align-items: center; justify-content: center; padding: 0; min-width: 70px; }
         .btn-x { background-color: #e67e22; font-size: 1.8rem; width: 70px; height: 70px; border-radius: 50%; display: flex; align-items: center; justify-content: center; padding: 0; min-width: 70px; }
@@ -27,7 +26,6 @@
         input[type="range"] { width: 90%; margin: 15px 0; cursor: pointer; }
         #quiz-header { font-size: 0.85rem; color: #888; margin-bottom: 5px; text-align: right; }
         
-        /* 分野名（カテゴリータグ）のサイズを大きく変更 */
         #category-tag { display: inline-block; background: var(--accent-color); color: white; padding: 5px 15px; border-radius: 20px; font-size: 1.1rem; font-weight: bold; margin-bottom: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
     </style>
 </head>
@@ -78,7 +76,9 @@
     <div id="view-result" class="hidden">
         <h1>学習終了</h1>
         <div id="score-display" style="font-size: 1.8rem; margin: 30px 0; line-height: 1.4;"></div>
-        <button onclick="location.reload()">分野選択に戻る</button>
+        <button onclick="showView('view-setup')">別の分野を学習する</button>
+        <br>
+        <button style="background-color: #95a5a6; margin-top: 10px;" onclick="location.reload()">ログアウトして戻る</button>
     </div>
 </div>
 
@@ -145,7 +145,9 @@
     }
 
     function showView(id) {
+        // すべての画面を隠す
         document.querySelectorAll('.container > div').forEach(div => div.classList.add('hidden'));
+        // 指定した画面だけ表示する
         document.getElementById(id).classList.remove('hidden');
     }
 
